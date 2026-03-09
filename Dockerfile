@@ -92,5 +92,7 @@ RUN chmod +x /usr/local/bin/quantifyHippocampalSubfields.sh
 COPY mri_scripts/ /workspace/mri_scripts/
 COPY suvr_scripts/ /workspace/suvr_scripts/
 
+# COPY license.txt /usr/local/freesurfer/license.txt
+
 WORKDIR /workspace
 CMD ["/bin/bash"]

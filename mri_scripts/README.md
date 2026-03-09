@@ -1,6 +1,6 @@
 # MRI Scripts
 
-Scripts for running FreeSurfer `recon-all` on T1 MRI data in parallel, extracting cortical/subcortical statistics, and converting outputs for visualization.
+Scripts for running FreeSurfer `recon-all` on T1 MRI data in parallel, extracting cortical/subcortical statistics, and converting outputs for visualization. These are commands run in the container built from the Dockerfile in this repository.
 
 ---
 

@@ -1,6 +1,6 @@
 # PET SUVR Scripts
 
-Scripts for co-registering PET scans to MRI and computing SUVRs (Standardized Uptake Value Ratios) by brain region.
+Scripts for co-registering PET scans to MRI and computing SUVRs (Standardized Uptake Value Ratios) by brain region. These are commands run in the container built from the Dockerfile in this repository.
 
 ---
 

@@ -9,6 +9,7 @@ This repository provides:
 1. A Docker image with FreeSurfer 6, FSL, MATLAB Runtime (R2012b), and R pre-installed (about 24gb).
 2. Scripts for running `recon-all` on T1 MRI data (in parallel), extracting cortical/subcortical statistics, and converting outputs for visualization.
 3. Scripts for co-registering PET scans to MRI and computing SUVRs (Standardized Uptake Value Ratios) by brain region.
+4. You will need to acquire a FreeSurfer license (free for academic use) and set it up in the container at /usr/local/freesurfer. This can be permanently done by copying the `license.txt` file into the Docker image (see Dockerfile) or by mounting a local directory containing the license at runtime.
 
 ---
 
