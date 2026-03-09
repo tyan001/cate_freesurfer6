@@ -153,7 +153,7 @@ The `nii/` directories feed directly into the MRI and PET pipelines respectively
 
 | Tool | Version | Purpose |
 | --- | --- | --- |
-| FreeSurfer | 6.0.0 | MRI cortical reconstruction |
+| FreeSurfer | 6.0.0 | MRI brain volume processing |
 | FSL | latest | PET-MRI registration (FLIRT) |
 | MATLAB Runtime | R2012b | Hippocampal subfield segmentation |
 | R (`oro.nifti`) | — | NIfTI I/O for PET SUVR computation |
