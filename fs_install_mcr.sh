@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+# script to facilitate easy installation of the matlab runtime package
+
+set -e
+
+patch_installer() {
+   (cd $1 && rm -f $2.NEW $2.ORIG)
+   (cd $1 && cp -p -f $2 $2.ORIG && chmod +w $2)
+   (cd $1 && cat $2 | sed 's;arch_in=.*;arch_in=maci64;' > $2.NEW)
+   (cd $1 && cp -p -f $2.NEW $2 && chmod 755 $2)
+   ## debug
+   # echo "Changed matlab $2 script for arch=arm to install x86_64 binaries"
+   # (cd $1 && diff $2 $2.ORIG)
+}
+
+# check arguments
+if [ "$#" -ne 1 ]; then
+    echo "ERROR: must specify MCR version as argument"
+    echo "EXAMPLE: fs_install_mcr R2019b"
+    exit 1
+fi
+
+MCR_VER="$1"
+
+# check FS directory
+if [[ -z "$FREESURFER_HOME" ]]; then
+    echo "ERROR: must set FREESURFER_HOME before installing"
+    echo "INFO: if you're using sudo, make sure to pass the FS home variable with"
+    echo "INFO: sudo FREESURFER_HOME=\$FREESURFER_HOME fs_install_mcr $@"
+    exit 1
+fi
+
+# operate in tmp directory
+TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
+cd $TMP_DIR
+
+# cleanup tmp directory at exit
+function cleanup {
+    cd $FREESURFER_HOME
+    rm -rf $TMP_DIR
+}
+trap cleanup EXIT
+
+if [ "$(uname -s)" == "Linux" ]; then
+    OS_TAG=glnxa64
+else
+    OS_TAG=maci64
+fi
+
+# download the os-specific installer
+if [[ "$MCR_VER" =~ R2012a|R2012b|R2013a ]]; then
+    curl --location https://ssd.mathworks.com/supportfiles/MCR_Runtime/$MCR_VER/MCR_${MCR_VER}_${OS_TAG}_installer.zip -o installer.zip
+elif [[ "$MCR_VER" =~ R2019b ]]; then
+    curl --location https://ssd.mathworks.com/supportfiles/downloads/$MCR_VER/Release/9/deployment_files/installer/complete/$OS_TAG/MATLAB_Runtime_${MCR_VER}_Update_9_${OS_TAG}.zip -o installer.zip
+elif [[ "$MCR_VER" =~ R2014a|R2014b ]]; then
+    curl --location https://ssd.mathworks.com/supportfiles/downloads/$MCR_VER/deployment_files/$MCR_VER/installers/$OS_TAG/MCR_${MCR_VER}_${OS_TAG}_installer.zip -o installer.zip
+else
+    echo "Unsupported runtime version $MCR_VER"
+    exit 1
+fi
+unzip installer.zip
+
+# run non-interactive installation
+TMP_DEST_DIR=$TMP_DIR/install-target
+
+# On MacOS, the GUI installer may be called and install in the default path.
+# It will automatically delete and re-install the same distro found there.
+darwin_gui_install="/Applications/MATLAB/MATLAB_Runtime"
+APPLE_M1="false"
+
+# Hack the matlab install script to think the arch is maci64 on an arm Apple machine (uname -p = arm)
+if [[ "$(uname -s)" == "Darwin" ]] && [[ "$(uname -p)" == "arm" ]]; then
+   APPLE_M1="true"
+   patch_installer $TMP_DIR install
+   patch_installer $TMP_DIR/bin/maci64 install_unix
+   printf "\n"
+   echo "*** IMPORTANT NOTE ***"
+   echo "If you are prompted by the MATLAB installer to specify where to intall"
+   echo "the runtime environment, then please use this (default) path:"
+   echo "$darwin_gui_install"
+   echo "Otherwise, the installation will be incomplete."
+   printf "\n"
+fi
+
+./install -mode silent -agreeToLicense yes -destinationFolder $TMP_DEST_DIR
+## debug
+# bash -x ./install -mode silent -agreeToLicense yes -destinationFolder $TMP_DEST_DIR
+
+if [ -e $TMP_DEST_DIR/v* ]; then
+   # move mcr install to freesurfer directory
+   MCR_DIR="$(ls -d $TMP_DEST_DIR/v*)"
+   MCR_NAME="$(basename $MCR_DIR)"
+   MCR_TARGET_DIR=$FREESURFER_HOME/MCR$MCR_NAME
+
+   if [ -d "$MCR_TARGET_DIR" ]; then
+       # MCR already installed
+       echo "MCR $MCR_NAME ($MCR_VER) already exists in $FREESURFER_HOME"
+       read -p "do you want to reinstall? [y/n] " -n 1 -r
+       echo
+       if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+           echo "exiting without install"
+           exit 0
+       fi
+       rm -rf $MCR_TARGET_DIR
+   fi
+
+   mv $MCR_DIR $MCR_TARGET_DIR
+   echo "$MCR_VER installed successfully in $MCR_TARGET_DIR"
+
+elif [ "$APPLE_M1" == "true" ]; then 
+   # Try to fall back to default Matlab GUI install path
+   if [ -e $darwin_gui_install/v* ]; then
+      MCR_DIR="$(ls -d $darwin_gui_install/v*)"
+      MCR_NAME="$(basename $MCR_DIR)"
+      MCR_TARGET_DIR=$FREESURFER_HOME/MCR$MCR_NAME
+      # create soft link in FS tree pointing to gui install path
+      if [ -d $darwin_gui_install/$MCR_NAME ]; then
+         echo "If prompted for a password, please enter it (must be run from an account with sudo permission)."
+         (cd $FREESURFER_HOME && sudo rm -f $MCR_TARGET_DIR)
+         (cd $FREESURFER_HOME && sudo ln -s $darwin_gui_install/$MCR_NAME $MCR_TARGET_DIR)
+         (cd $FREESURFER_HOME && ls -l $MCR_TARGET_DIR)
+         echo "$MCR_VER installed successfully in $MCR_TARGET_DIR"
+      fi
+   fi
+fi
